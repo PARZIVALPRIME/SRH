@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bloom's Taxonomy Classifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 2rem;
+        }
+        .badge {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="mb-4 text-center">Bloom's Taxonomy Classifier</h2>
+
+    <form method="POST" enctype="multipart/form-data" class="card p-4 shadow-sm">
+        <div class="mb-3">
+            <label for="question" class="form-label">Enter a Question or Paste Text</label>
+            <textarea class="form-control" id="question" name="question" placeholder="Type a question or paste document text here..." rows="4">{{ question }}</textarea>
+        </div>
+
+        <div class="text-center text-muted mb-3">OR</div>
+
+        <div class="mb-3">
+            <label for="file_input" class="form-label">Upload a File (PDF, DOCX, PNG, JPG)</label>
+            <input class="form-control" type="file" id="file_input" name="file_input" accept=".pdf,.docx,.png,.jpg,.jpeg">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Classify</button>
+    </form>
+
+    {% if error %}
+    <div class="alert alert-danger mt-3">{{ error }}</div>
+    {% endif %}
+
+    {% if prediction %}
+    <div class="alert alert-success mt-3">
+        <strong>Prediction:</strong> {{ prediction }}
+    </div>
+    {% endif %}
+
+    {% if predictions %}
+    <h4 class="mt-4">Predictions from {{ source }}:</h4>
+    <table class="table table-bordered table-striped mt-2">
+        <thead class="table-dark">
+            <tr>
+                <th>#</th>
+                <th>Question</th>
+                <th>Bloom's Category</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for question, pred in predictions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ question }}</td>
+                <td>
+                    <span class="badge 
+                        {% if 'Remember' in pred %}bg-primary
+                        {% elif 'Understand' in pred %}bg-info
+                        {% elif 'Apply' in pred %}bg-success
+                        {% elif 'Analyze' in pred %}bg-warning text-dark
+                        {% elif 'Evaluate' in pred %}bg-danger
+                        {% elif 'Create' in pred %}bg-dark
+                        {% endif %}
+                    ">{{ pred }}</span>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if predictions %}
+    <form method="GET" action="/download_csv">
+        {% for question, pred in predictions %}
+            <input type="hidden" name="question" value="{{ question }}">
+            <input type="hidden" name="category" value="{{ pred }}">
+        {% endfor %}
+        <button type="submit" class="btn btn-success mt-3">📥 Download as CSV</button>
+    </form>
+    {% endif %}
+
+    
+    {% if bloom_counts %}
+    <h4 class="mt-4">Bloom's Taxonomy Distribution</h4>
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <canvas id="bloomChart" style="height: 280px;"></canvas>
+        </div>
+    </div>    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const data = {
+            labels: {{ bloom_counts.keys() | list | safe }},
+            datasets: [{
+                label: 'Question Count',
+                data: {{ bloom_counts.values() | list | safe }},
+                backgroundColor: [
+                    '#0d6efd', '#0dcaf0', '#198754', '#ffc107', '#dc3545', '#212529'
+                ],
+                borderColor: '#fff',
+                borderWidth: 1
+            }]
+        };
+
+        const config = {
+            type: 'bar', // Change to 'pie' if you prefer
+            data: data,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Questions by Bloom Level'
+                    }
+                }
+            }
+        };
+
+        new Chart(document.getElementById('bloomChart'), config);
+    </script>
+    {% endif %}
+    {% endif %}
+</div>
+</body>
+</html>
